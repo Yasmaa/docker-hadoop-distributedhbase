@@ -1,0 +1,118 @@
+version: "2"
+
+services:
+
+  zookeeper:
+    build:
+      context: .
+      dockerfile: DockerfileZookeeper
+    container_name: zookeeper
+    hostname: zookeeper
+    volumes: 
+      - zookeeper_cs:/zookeeper/zk 
+
+    extra_hosts:
+      - "slave1:172.20.10.3"
+      - "master:172.20.10.2"
+      - "slave2:172.20.10.4"  
+    networks:
+      hadoop_cluster:
+        ipv4_address: 172.20.10.5 
+  
+  master:
+    build:
+      context: .
+      dockerfile: DockerfileMaster
+    container_name: master
+    hostname: master
+    #tty: true
+    ports:
+      - 9870:9870
+      - 8088:8088
+      - 9866:9866
+      - 9864:9864
+      - 60010:60010
+      - 60000:60000
+      - 16010:16010
+    volumes:
+      - hadoop_master:/opt/hadoop/dfs/master
+    env_file:
+      - ./hadoop.env
+    extra_hosts:
+      - "slave1:172.20.10.3"
+      - "slave2:172.20.10.4"
+      - "zookeeper:172.20.10.5"
+
+    depends_on:
+      - zookeeper  
+    networks:
+      hadoop_cluster:
+        ipv4_address: 172.20.10.2
+
+
+       
+
+        
+
+  slave1:
+    build:
+      context: .
+      dockerfile: DockerfileSlave1
+    container_name: slave1
+    hostname: slave1
+    volumes:
+      - hadoop_slave1:/hadoop/dfs/slave1
+    environment:
+      SERVICE_PRECONDITION: "master:9870"
+    env_file:
+      - ./hadoop.env
+    extra_hosts:
+      - "master:172.20.10.2"
+      - "slave2:172.20.10.4"
+      - "zookeeper:172.20.10.5"
+          
+    depends_on:
+      - master
+      - zookeeper
+    networks:
+      hadoop_cluster:
+        ipv4_address: 172.20.10.3
+
+  slave2:
+    build:
+      context: .
+      dockerfile: DockerfileSlave2
+    container_name: slave2
+    hostname: slave2
+    volumes:
+      - hadoop_master:/hadoop/dfs/slave2
+    environment:
+      SERVICE_PRECONDITION: "master:9870"
+    env_file:
+      - ./hadoop.env
+    extra_hosts:
+      - "slave1:172.20.10.3"
+      - "master:172.20.10.2"
+      - "zookeeper:172.20.10.5"   
+       
+    depends_on:
+      - master
+      - zookeeper
+    networks:
+      hadoop_cluster:
+        ipv4_address: 172.20.10.4
+
+volumes:
+  hadoop_master:
+  hadoop_master1:  
+  hadoop_slave1:
+  hadoop_slave2:
+  zookeeper_cs:  
+
+networks:
+  hadoop_cluster:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.10.0/24
+          gateway: 172.20.10.1

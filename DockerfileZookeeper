@@ -1,0 +1,43 @@
+From ubuntu:18.04
+
+MAINTAINER Asma
+ENV ZK_HOME /usr/local/zookeeper
+ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64
+
+USER root
+WORKDIR /root
+RUN DEBIAN_FRONTEND=noninteractive apt-get update
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server 
+
+
+
+RUN DEBIAN_FRONTEND=noninteractive apt install -y openjdk-8-jdk
+RUN DEBIAN_FRONTEND=noninteractive apt install -y wget && \
+	wget https://archive.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz && \
+	DEBIAN_FRONTEND=noninteractive apt-get install -y tar unzip && \
+	tar -xzf zookeeper-3.4.14.tar.gz && \
+	mv zookeeper-3.4.14 $ZK_HOME && \
+	rm zookeeper-3.4.14.tar.gz && \
+	mkdir -p /home/zookeeper/zookeeper/data 
+
+COPY ./zookeeper/zoo.cfg /usr/local/zookeeper/conf/
+	
+
+
+
+
+ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64 
+ENV PATH $JAVA_HOME/bin:$PATH 
+ENV PATH $ZK_HOME/bin:$PATH    
+
+
+ADD ./scripts /home/scripts
+RUN chmod 777 /home/scripts/*
+
+EXPOSE 2181 2888 3888
+
+
+VOLUME ["/usr/local/zookeeper/conf", "/home/zookeeper/zookeeper/data"]
+
+CMD ["/home/scripts/start.sh"]
